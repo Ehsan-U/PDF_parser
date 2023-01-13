@@ -9,16 +9,6 @@ class Parser():
     logger = logging.getLogger("PDF_parser")
     coloredlogs.install(level='DEBUG', logger=logger)
 
-    def __init__(self):
-        self.db = set()
-        # self.phoneRegex = re.compile(r"""
-        #                     (\d{2,4})
-        #                     (-)
-        #                     (\d{2,4})
-        #                     (-)
-        #                     (\d{2,6})
-        #                 """, re.VERBOSE)
-
     def init_writer(self, filename):
         f = open(f"{filename}.csv",'w')
         writer = csv.writer(f)
