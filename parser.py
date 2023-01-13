@@ -4,6 +4,7 @@ import logging
 import pdfplumber
 import csv
 from traceback import print_exc
+from pprint import pprint
 
 class Parser():
     logger = logging.getLogger("PDF_parser")
@@ -108,5 +109,61 @@ class Parser():
             file.close()
 
 
-p = Parser()
-p.main()
+
+class C_parser(Parser):
+
+
+    # extract companies names
+    def extract_names(self, datalist):
+        companies = []
+        for item in datalist:
+            if "Address:" in item:
+                current_index = datalist.index(item)
+                company_index = current_index - 1
+                company_name = datalist[company_index]
+                companies.append(company_name)
+        return companies
+
+    # extract company data
+    def extract_company(self, datalist, companies):
+        for item in companies:
+            current_index = companies.index(item)
+            current_company = item
+            if item != companies[-1]:
+                next_company = companies[current_index + 1]
+                company = self.get_slice(current_company, next_company, datalist)
+                yield company
+            else:
+                company = self.get_slice(current_company, None, datalist, last_slice=True)
+    def get_slice(self, current_company, next_company, datalist, last_slice=None):
+        current_company_index = datalist.index(current_company)
+        if not last_slice:
+            next_company_index = datalist.index(next_company)
+            company = datalist[current_company_index:next_company_index]
+        else:
+            company = datalist[current_company_index:]
+        return company
+
+
+    def parse(self, pdf_file, writer):
+        with pdfplumber.open(pdf_file) as pdf:
+            pages = pdf.pages[1:2]
+            datalist = []
+            for page in pages:
+                data = page.extract_text().split('\n')[1:]
+                datalist += data
+            companies = self.extract_names(datalist)
+            for company in self.extract_company(datalist, companies):
+                pprint(company)
+                # resume on monday
+    def main(self):
+        file, writer = self.init_writer("b_test")
+        try:
+            self.parse("C.pdf", writer)
+        except Exception:
+            print_exc()
+        finally:
+            file.close()
+
+c = C_parser()
+c.main()
