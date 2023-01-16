@@ -78,6 +78,12 @@ class C_parser():
             try:
                 val = company[current_index]
                 if stopward in val:
+                    if stopward == 'Other':
+                        current_value = current_value + " " + stopward
+                    break
+                elif "Company" in val[:7]:
+                    break
+                elif ":" in val:
                     break
                 else:
                     current_value = current_value + " " + val
@@ -92,7 +98,7 @@ class C_parser():
                 current_index = company.index(item)
                 current_value = item.split(":")[-1]
                 slice = self.make_slice(current_index, current_value, company, "Other")
-                return slice.strip() + " " + 'Other'
+                return slice.strip()
 
     def cal_desc(self, company):
         for item in company:
