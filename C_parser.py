@@ -6,8 +6,7 @@ import csv
 from traceback import print_exc
 
 
-
-class C_parser():
+class Parser():
     logger = logging.getLogger("PDF_parser")
     coloredlogs.install(level='DEBUG', logger=logger)
 
@@ -57,6 +56,7 @@ class C_parser():
                 current_value = item.split(":")[-1]
                 slice = self.make_slice(current_index, current_value, company, "Tel:")
                 return slice.strip()
+        self.logger.warning(" [+] Warning: address missing!")
 
     def cal_phone(self, company):
         phone = ''
@@ -99,6 +99,7 @@ class C_parser():
                 current_value = item.split(":")[-1]
                 slice = self.make_slice(current_index, current_value, company, "Other")
                 return slice.strip()
+        self.logger.warning(" [+] Warning: products_services missing!")
 
     def cal_desc(self, company):
         for item in company:
@@ -108,6 +109,7 @@ class C_parser():
                 current_value = previous_value + " " + item.split(":")[-1]
                 slice = self.make_slice(current_index, current_value, company, ":")
                 return slice.strip()
+        self.logger.warning(" [+] Warning: desc missing!")
 
     def primary_contact(self, company):
         for item in company:
@@ -116,6 +118,7 @@ class C_parser():
                 current_value = item.split(":")[-1]
                 slice = self.make_slice(current_index, current_value, company, ":")
                 return slice.strip()
+        self.logger.warning(" [+] Warning: primary_contact missing!")
 
     def cal_brands(self, company):
         for item in company:
@@ -124,6 +127,7 @@ class C_parser():
                 current_value = item.split(":")[-1]
                 slice = self.make_slice(current_index, current_value, company, ":")
                 return slice.strip()
+        self.logger.warning(" [+] Warning: cal_brands missing!")
 
     def build(self, company):
         name = company[0]
@@ -160,5 +164,5 @@ class C_parser():
         finally:
             file.close()
 
-c = C_parser()
-c.main()
+p = Parser()
+p.main()

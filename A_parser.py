@@ -71,6 +71,15 @@ class Parser():
             return desc.strip()
         self.logger.warning(" [+] Warning: desc missing!")
 
+    def cal_parent(self, company):
+        parent = ''
+        for item in company:
+            if 'Parent Company:' in item:
+                index = -1
+                parent = company[-1].split("Parent Company:")[-1].replace(")",'')
+                return parent.strip()
+        self.logger.warning(" [+] Warning: parent missing!")
+
     def build(self, company):
         name = company[0]
         address = self.cal_address(company)
@@ -79,8 +88,8 @@ class Parser():
         email = self.cal_email(company)
         brands = self.cal_brands(company)
         desc = self.cal_desc(company)
-
-        return [name, address, phone, website, email, brands, desc]
+        parent = self.cal_parent(company)
+        return [name, address, phone, website, email, brands, desc, parent]
 
     def parse(self, pdf_file, writer):
         with pdfplumber.open(pdf_file) as pdf:
@@ -99,7 +108,7 @@ class Parser():
 
     def main(self):
         file, writer = self.init_writer('A_output')
-        writer.writerow(['Name', 'Address', 'Phone', 'Website', 'Email', 'Brands', 'Description'])
+        writer.writerow(['Name', 'Address', 'Phone', 'Website', 'Email', 'Brands', 'Description', 'Parent Company'])
         try:
             self.parse("A.pdf", writer)
         except Exception:
