@@ -116,7 +116,7 @@ class C_parser():
             if "Brands:" in item:
                 current_index = company.index(item)
                 current_value = item.split(":")[-1]
-                slice = self.make_slice(current_index, current_value, company, '')
+                slice = self.make_slice(current_index, current_value, company, ":")
                 return slice.strip()
 
     def build(self, company):
