@@ -5,7 +5,10 @@ from traceback import print_exc
 from pprint import pprint
 
 class Parser():
-    header = True
+    def __init__(self):
+        self.header = True
+        self.last_person = ''
+        self.persons = []
 
     def init_writer(self):
         file = open("out.csv",'w', newline='')
@@ -60,7 +63,6 @@ class Parser():
         return city, state, zipcode
 
     def cal_address(self, slice):
-
         addr1, addr2, city, state, zipcode = '', '', '', '', ''
         try:
             if "Mailing & Home Address".lower() in "".join(slice).lower():
@@ -171,6 +173,24 @@ class Parser():
                 result = self.organize(name, address, accumulations)
             yield result
 
+
+    def merge_dicts(self, old_dict, new_dict):
+        for key,val in new_dict.items():
+            if old_dict[key]:
+                pass
+            else:
+                old_dict[key] = val
+        return old_dict
+
+    def is_exist(self, person):
+        for p in self.persons:
+            if person['Name'] in p:
+                old_dict = p.get(person['Name'])
+                new_dict = person
+                updated = self.merge_dicts(old_dict, new_dict)
+                p[person['Name']] = updated
+                return True
+
     def parse(self, pdf):
         with pdfplumber.open(pdf) as p:
             for n, page in enumerate(p.pages[7:], start=1):
@@ -178,12 +198,18 @@ class Parser():
                 names = [item.get('text') for item in page.search("[A-Z]+,[A-Z]+", regex=True)]
                 for person in self.extract_person_data(names, page):
                     if person:
-                        self.writer.writerow(person.values())
+                        if self.is_exist(person):
+                            continue
+                        self.persons.append({person['Name']: person})
+
+            for person in self.persons:
+                value = list(person.values())[0]
+                self.writer.writerow(value.values())
 
     def main(self):
         file = self.init_writer()
         try:
-            self.parse('file.pdf')
+            self.parse('report.pdf')
         except Exception:
             print_exc()
         else:
