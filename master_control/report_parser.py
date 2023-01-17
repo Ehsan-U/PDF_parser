@@ -8,7 +8,7 @@ class Parser():
     header = True
 
     def init_writer(self):
-        file = open("out.csv",'w')
+        file = open("out.csv",'w', newline='')
         self.writer = csv.writer(file)
         return file
 
@@ -41,13 +41,17 @@ class Parser():
     def cal_city_state_zip(self, addr2, addr3):
         if re.search("\d{5}", addr2):
             addr2 = addr2.split(' ')
-            if len(addr2) > 3:
+            if len(addr2) == 5:
+                city, state, zipcode = addr2[0] + addr2[1] + addr2[2], addr2[3], addr2[-1]
+            elif len(addr2) == 4:
                 city, state, zipcode = addr2[0]+addr2[1], addr2[2], addr2[-1]
             else:
                 city, state, zipcode = addr2[0] ,addr2[1], addr2[-1]
         elif re.search("\d{5}", addr3):
             addr3 = addr3.split(' ')
-            if len(addr3) > 3:
+            if len(addr3) == 5:
+                city, state, zipcode = addr3[0] + addr3[1] + addr3[2], addr3[3], addr3[-1]
+            elif len(addr3) == 4:
                 city, state, zipcode = addr3[0]+addr3[1], addr3[2], addr3[-1]
             else:
                 city, state, zipcode = addr3[0] ,addr3[1], addr3[-1]
@@ -56,12 +60,13 @@ class Parser():
         return city, state, zipcode
 
     def cal_address(self, slice):
+
         addr1, addr2, city, state, zipcode = '', '', '', '', ''
         try:
             if "Mailing & Home Address".lower() in "".join(slice).lower():
                 addr1 = re.search("(.*?)(?:Weekly)", slice[2]).group(1).strip()
                 addr2 = re.search("(.*?)(?:Rate)", slice[3]).group(1).replace("LWW",'').strip()
-                addr3 = re.search("(.*?)(?:\:)", slice[4]).group(1).replace("LWW",'').strip()
+                addr3 = re.search("(.*?)(?:\:|Rate)", slice[4]).group(1).replace("LWW",'').strip()
                 city, state, zipcode = self.cal_city_state_zip(addr2, addr3)
         except Exception:
             pass
@@ -153,7 +158,7 @@ class Parser():
         page = page.extract_text().split('\n')
         for name in names:
             current_index = self.find_index(name, page)
-            if current_index:
+            if current_index != None:
                 current_value = name
                 if names[-1] == name:
                     slice = self.make_slice(current_index, current_value, page)
@@ -168,7 +173,7 @@ class Parser():
 
     def parse(self, pdf):
         with pdfplumber.open(pdf) as p:
-            for n, page in enumerate(p.pages[8:], start=1):
+            for n, page in enumerate(p.pages[7:], start=1):
                 print(f"\r [+] Parsed pages: {n}",end='')
                 names = [item.get('text') for item in page.search("[A-Z]+,[A-Z]+", regex=True)]
                 for person in self.extract_person_data(names, page):
