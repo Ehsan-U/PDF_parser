@@ -209,7 +209,7 @@ class Parser():
     def main(self):
         file = self.init_writer()
         try:
-            self.parse('report.pdf')
+            self.parse('file.pdf')
         except Exception:
             print_exc()
         else:
