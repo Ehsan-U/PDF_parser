@@ -149,32 +149,36 @@ class Parser():
         return data
 
     def extract_person_data(self, names, page):
+        result = ''
         page = page.extract_text().split('\n')
         for name in names:
             current_index = self.find_index(name, page)
-            current_value = name
-            if names[-1] == name:
-                slice = self.make_slice(current_index, current_value, page)
-            else:
-                next_value = names[names.index(name) + 1]
-                slice = self.make_slice(current_index, current_value, page, next_value)
-            name = self.cal_name(slice)
-            address = self.cal_address(slice)
-            accumulations = self.cal_accums(slice)
-            result = self.organize(name, address, accumulations)
+            if current_index:
+                current_value = name
+                if names[-1] == name:
+                    slice = self.make_slice(current_index, current_value, page)
+                else:
+                    next_value = names[names.index(name) + 1]
+                    slice = self.make_slice(current_index, current_value, page, next_value)
+                name = self.cal_name(slice)
+                address = self.cal_address(slice)
+                accumulations = self.cal_accums(slice)
+                result = self.organize(name, address, accumulations)
             yield result
 
     def parse(self, pdf):
         with pdfplumber.open(pdf) as p:
-            for page in p.pages:
+            for n, page in enumerate(p.pages[8:], start=1):
+                print(f"\r [+] Parsed pages: {n}",end='')
                 names = [item.get('text') for item in page.search("[A-Z]+,[A-Z]+", regex=True)]
                 for person in self.extract_person_data(names, page):
-                    self.writer.writerow(person.values())
+                    if person:
+                        self.writer.writerow(person.values())
 
     def main(self):
         file = self.init_writer()
         try:
-            self.parse('report.pdf')
+            self.parse('file.pdf')
         except Exception:
             print_exc()
         else:
