@@ -5,11 +5,12 @@ from traceback import print_exc
 from pprint import pprint
 
 class Parser():
+    header = True
 
     def init_writer(self):
         file = open("out.csv",'w')
-        writer = csv.writer(file)
-        return writer, file
+        self.writer = csv.writer(file)
+        return file
 
     def make_slice(self, current_index, current_value, page, stopward=None):
         if stopward:
@@ -37,24 +38,34 @@ class Parser():
         name = re.search("[A-Z]+,[A-Z]+", slice[0]).group()
         return name
 
-    def cal_city_state_zip(self, chunk2, chunk3):
-        if re.search("\d{5}", chunk2):
-            chunk2 = chunk2.split(' ')
-            city, state, zipcode = chunk2[0], chunk2[1], chunk2[2]
-        elif re.search("\d{5}", chunk3):
-            chunk3 = chunk3.split(' ')
-            city, state, zipcode = chunk3[0], chunk3[1], chunk3[2]
+    def cal_city_state_zip(self, addr2, addr3):
+        if re.search("\d{5}", addr2):
+            addr2 = addr2.split(' ')
+            if len(addr2) > 3:
+                city, state, zipcode = addr2[0]+addr2[1], addr2[2], addr2[-1]
+            else:
+                city, state, zipcode = addr2[0] ,addr2[1], addr2[-1]
+        elif re.search("\d{5}", addr3):
+            addr3 = addr3.split(' ')
+            if len(addr3) > 3:
+                city, state, zipcode = addr3[0]+addr3[1], addr3[2], addr3[-1]
+            else:
+                city, state, zipcode = addr3[0] ,addr3[1], addr3[-1]
         else:
             city, state, zipcode = '', '', ''
         return city, state, zipcode
 
     def cal_address(self, slice):
-        if "Mailing & Home Address".lower() in "".join(slice).lower():
-            chunk1 = re.search("(.*?)(?:Weekly)", slice[2]).group(1)
-            chunk2 = re.search("(.*?)(?:Rate)", slice[3]).group(1)
-            chunk3 = re.search("(.*?)(?:\:)", slice[4]).group(1)
-            city, state, zipcode = self.cal_city_state_zip(chunk2, chunk3)
-            return (chunk1, chunk2, city, state, zipcode)
+        addr1, addr2, city, state, zipcode = '', '', '', '', ''
+        try:
+            if "Mailing & Home Address".lower() in "".join(slice).lower():
+                addr1 = re.search("(.*?)(?:Weekly)", slice[2]).group(1).strip()
+                addr2 = re.search("(.*?)(?:Rate)", slice[3]).group(1).replace("LWW",'').strip()
+                addr3 = re.search("(.*?)(?:\:)", slice[4]).group(1).replace("LWW",'').strip()
+                city, state, zipcode = self.cal_city_state_zip(addr2, addr3)
+        except Exception:
+            pass
+        return (addr1, addr2, city, state, zipcode)
 
     def cal_accums(self, slice):
         accums_dict = {
@@ -105,17 +116,37 @@ class Parser():
         for acc in accums_dict.keys():
             for s in slice:
                 if acc in s:
-                    s_regx = re.search(r"(?:.*?)(?:HEALTH|VISION|Deposits|CodeCK1|Deposit|Exemptions|S-Single|SUI/DI|\sFLI|CIT|Local|Available)(.*)", s)
-                    if s_regx:
-                        s_val = s_regx.group(1).strip()
-                        value = re.search(rf"(?:Local\s1|)([0-9\s]+?)(?:{acc})", s_val).group(1).strip()
-                    else:
-                        value = re.search(rf"(?:Local\s1|)([0-9\s]+?)(?:{acc})", s).group(1).strip()
-                    if value.count(' ') == 1:
-                        accums_dict[acc] = value.replace(' ','.')
-                    elif value.count(' ') == 2:
-                        accums_dict[acc] = value.replace(' ', '',1).replace(' ','.')
-        pprint(accums_dict)
+                    try:
+                        s_regx = re.search(r"(?:.*?)(?:HEALTH|VISION|Deposits|CodeCK1|Deposit|Exemptions|S-Single|SUI/DI|\sFLI|CIT|Local|Available)(.*)", s)
+                        if s_regx:
+                            s_val = s_regx.group(1).strip()
+                            value = re.search(rf"(?:Local\s1|)([0-9\s]+?)(?:{acc})", s_val).group(1).strip()
+                        else:
+                            value = re.search(rf"(?:Local\s1|)([0-9\s]+?)(?:{acc})", s).group(1).strip()
+                        if value.count(' ') == 1:
+                            accums_dict[acc] = value.replace(' ','.')
+                        elif value.count(' ') == 2:
+                            accums_dict[acc] = value.replace(' ', '',1).replace(' ','.')
+                    except AttributeError:
+                        pass
+        return accums_dict
+
+
+    def organize(self, name, address, accumulations):
+        data = {
+            "Name":name,
+            "Address1":address[0],
+            "Address2": address[1],
+            "City": address[2],
+            "State": address[3],
+            "Zip": address[4],
+        }
+        for k, v in accumulations.items():
+            data[k] = v
+        if self.header:
+            self.header = False
+            self.writer.writerow(data.keys())
+        return data
 
     def extract_person_data(self, names, page):
         page = page.extract_text().split('\n')
@@ -127,28 +158,27 @@ class Parser():
             else:
                 next_value = names[names.index(name) + 1]
                 slice = self.make_slice(current_index, current_value, page, next_value)
-            # name = self.cal_name(slice)
-            # address = self.cal_address(slice)
-            print(name)
-            print(self.cal_accums(slice))
-            yield None
+            name = self.cal_name(slice)
+            address = self.cal_address(slice)
+            accumulations = self.cal_accums(slice)
+            result = self.organize(name, address, accumulations)
+            yield result
 
     def parse(self, pdf):
         with pdfplumber.open(pdf) as p:
-            page =p.pages[1]
-            names = [item.get('text') for item in page.search("[A-Z]+,[A-Z]+", regex=True)]
-            for person in self.extract_person_data(names, page):
-                pass
+            for page in p.pages:
+                names = [item.get('text') for item in page.search("[A-Z]+,[A-Z]+", regex=True)]
+                for person in self.extract_person_data(names, page):
+                    self.writer.writerow(person.values())
 
     def main(self):
-        writer, file = self.init_writer()
+        file = self.init_writer()
         try:
             self.parse('report.pdf')
         except Exception:
             print_exc()
         else:
             file.close()
-
 
 
 p = Parser()
