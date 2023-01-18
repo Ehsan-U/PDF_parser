@@ -38,24 +38,27 @@ class Parser():
                 return index
 
     def cal_name(self, slice):
-        name = re.search("[A-Z]+,[A-Z]+", slice[0]).group()
+        try:
+            name = re.search("[A-Z]+,[A-Z]+", slice[0]).group()
+        except AttributeError:
+            name = re.search("(.*?)(?:\sGross\:)", slice[0]).group(1)
         return name
 
     def cal_city_state_zip(self, addr2, addr3):
         if re.search("\d{5}", addr2):
             addr2 = addr2.split(' ')
             if len(addr2) == 5:
-                city, state, zipcode = addr2[0] + addr2[1] + addr2[2], addr2[3], addr2[-1]
+                city, state, zipcode = addr2[0] + ' ' + addr2[1] + ' ' + addr2[2], addr2[3], addr2[-1]
             elif len(addr2) == 4:
-                city, state, zipcode = addr2[0]+addr2[1], addr2[2], addr2[-1]
+                city, state, zipcode = addr2[0]+ ' ' +addr2[1], addr2[2], addr2[-1]
             else:
                 city, state, zipcode = addr2[0] ,addr2[1], addr2[-1]
         elif re.search("\d{5}", addr3):
             addr3 = addr3.split(' ')
             if len(addr3) == 5:
-                city, state, zipcode = addr3[0] + addr3[1] + addr3[2], addr3[3], addr3[-1]
+                city, state, zipcode = addr3[0] + ' ' + addr3[1] + ' ' + addr3[2], addr3[3], addr3[-1]
             elif len(addr3) == 4:
-                city, state, zipcode = addr3[0]+addr3[1], addr3[2], addr3[-1]
+                city, state, zipcode = addr3[0]+ ' ' +addr3[1], addr3[2], addr3[-1]
             else:
                 city, state, zipcode = addr3[0] ,addr3[1], addr3[-1]
         else:
@@ -127,9 +130,9 @@ class Parser():
                         s_regx = re.search(r"(?:.*?)(?:HEALTH|VISION|Deposits|CodeCK1|Deposit|Exemptions|S-Single|SUI/DI|\sFLI|CIT|Local|Available)(.*)", s)
                         if s_regx:
                             s_val = s_regx.group(1).strip()
-                            value = re.search(rf"(?:Local\s1|)([0-9\s]+?)(?:{acc})", s_val).group(1).strip()
+                            value = re.search(rf"(?:\w+\s1|)(\s[0-9\s]+?)(?:{acc})", s_val).group(1).strip()
                         else:
-                            value = re.search(rf"(?:Local\s1|)([0-9\s]+?)(?:{acc})", s).group(1).strip()
+                            value = re.search(rf"(?:\w+\s1|)(\s[0-9\s]+?)(?:{acc})", s).group(1).strip()
                         if value.count(' ') == 1:
                             accums_dict[acc] = value.replace(' ','.')
                         elif value.count(' ') == 2:
@@ -177,7 +180,8 @@ class Parser():
     def merge_dicts(self, old_dict, new_dict):
         for key,val in new_dict.items():
             if old_dict[key]:
-                pass
+                if val and key != 'Name' and old_dict[key] != new_dict[key]:
+                    old_dict[key] = old_dict[key] + " " + val
             else:
                 old_dict[key] = val
         return old_dict
@@ -191,11 +195,21 @@ class Parser():
                 p[person['Name']] = updated
                 return True
 
+
+    def extract_person_names(self, page):
+        names = []
+        regx = re.findall("(.*?)(?:\sGross\:)|([A-Z]+,[A-Z]+)", page.extract_text())
+        for name in regx:
+            if any(name):
+                name = "".join([n for n in name if n])
+                names.append(name)
+        return names
+
     def parse(self, pdf):
         with pdfplumber.open(pdf) as p:
-            for n, page in enumerate(p.pages[7:], start=1):
+            for n, page in enumerate(p.pages[7:-1], start=1):
                 print(f"\r [+] Parsed pages: {n}",end='')
-                names = [item.get('text') for item in page.search("[A-Z]+,[A-Z]+", regex=True)]
+                names = self.extract_person_names(page)
                 for person in self.extract_person_data(names, page):
                     if person:
                         if self.is_exist(person):
@@ -209,7 +223,7 @@ class Parser():
     def main(self):
         file = self.init_writer()
         try:
-            self.parse('report.pdf')
+            self.parse('file.pdf')
         except Exception:
             print_exc()
         else:
