@@ -45,17 +45,17 @@ class Parser():
         if re.search("\d{5}", addr2):
             addr2 = addr2.split(' ')
             if len(addr2) == 5:
-                city, state, zipcode = addr2[0] + addr2[1] + addr2[2], addr2[3], addr2[-1]
+                city, state, zipcode = addr2[0] + ' ' + addr2[1] + ' ' + addr2[2], addr2[3], addr2[-1]
             elif len(addr2) == 4:
-                city, state, zipcode = addr2[0]+addr2[1], addr2[2], addr2[-1]
+                city, state, zipcode = addr2[0]+ ' ' +addr2[1], addr2[2], addr2[-1]
             else:
                 city, state, zipcode = addr2[0] ,addr2[1], addr2[-1]
         elif re.search("\d{5}", addr3):
             addr3 = addr3.split(' ')
             if len(addr3) == 5:
-                city, state, zipcode = addr3[0] + addr3[1] + addr3[2], addr3[3], addr3[-1]
+                city, state, zipcode = addr3[0] + ' ' + addr3[1] + ' ' + addr3[2], addr3[3], addr3[-1]
             elif len(addr3) == 4:
-                city, state, zipcode = addr3[0]+addr3[1], addr3[2], addr3[-1]
+                city, state, zipcode = addr3[0]+ ' ' +addr3[1], addr3[2], addr3[-1]
             else:
                 city, state, zipcode = addr3[0] ,addr3[1], addr3[-1]
         else:
@@ -176,7 +176,10 @@ class Parser():
 
     def merge_dicts(self, old_dict, new_dict):
         for key,val in new_dict.items():
+
             if old_dict[key]:
+                if val and key != 'Name' and old_dict[key] != new_dict[key]:
+                    print(f"{key=}, {old_dict['Name']=},{new_dict['Name']=}, {old_dict[key]=}, {new_dict[key]=}")
                 pass
             else:
                 old_dict[key] = val
