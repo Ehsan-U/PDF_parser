@@ -182,12 +182,7 @@ class Parser():
 
             if old_dict[key]:
                 if val and key != 'Name' and old_dict[key] != new_dict[key]:
-<<<<<<< HEAD
                     old_dict[key] = old_dict[key] + " " + val
-=======
-                    print(f"{key=}, {old_dict['Name']=},{new_dict['Name']=}, {old_dict[key]=}, {new_dict[key]=}")
-                pass
->>>>>>> 043a2bf917994e8f44ffdec3877af8dc1e61d796
             else:
                 old_dict[key] = val
         return old_dict
